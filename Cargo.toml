@@ -1,0 +1,8 @@
+[package]
+name = "event_parse"
+version = "0.1.0"
+authors = ["Johan Burell <johan.burell@valtech.se>"]
+
+[dependencies]
+libevdev-sys = "0.1.1"
+libc = "*"
