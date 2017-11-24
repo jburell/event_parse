@@ -5,13 +5,20 @@ use self::libevdev_sys::linux_input::*;
 use std::{ptr, fmt};
 use std::ffi::CStr;
 use std::os::unix::io::IntoRawFd;
-use std::fs::File;
-//use self::libc::timeval;
+use std::fs::{File, self};
+use std::collections::HashMap;
 
+#[cfg(target_pointer_width = "32")]
+type Int = i32;
+
+#[cfg(target_pointer_width = "64")]
+type Int = i64;
+
+#[repr(C)]
 #[derive(Clone, Copy)]
 struct TimeVal {
-	sec: i32,
-	usec: i32,
+	sec: Int,
+	usec: Int,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -20,7 +27,7 @@ enum EvdevType {
     EvKey,
     EvRel,
     EvAbs,
-   // UNDEFINED(u16),
+   // Undefined(u16),
 }
 
 impl From<u16> for EvdevType {
@@ -30,32 +37,22 @@ impl From<u16> for EvdevType {
             1 => EvdevType::EvKey,
             2 => EvdevType::EvRel,
             3 => EvdevType::EvAbs,
-            _ => panic!(format!("EvdevType::UNDEFINED({})", num)),
+            _ => panic!(format!("EvdevType::Undefined({:x})", num)),
         }
     }
 }
 
-//macro_rules! evdev_type {
-//    ($tt, $expr) => (
-//
-//    )
-//}
-//
-//evdev_type!(EV_SYN, 0);
-
-
-
 #[derive(Debug, Clone, PartialEq)]
 enum SynCode {
     SynReport,
-   // UNDEFINED(u16),
+   // Undefined(u16),
 }
 
 impl From<u16> for SynCode {
     fn from(num: u16) -> Self {
         match num {
             0 => SynCode::SynReport,
-            _ => panic!(format!("SynCode::UNDEFINED({})", num)),
+            _ => panic!(format!("SynCode::Undefined({:x})", num)),
         }
     }
 }
@@ -70,7 +67,7 @@ impl From<u16> for KeyCode {
 	fn from(num: u16) -> Self {
 		match num {
 			330 => KeyCode::BtnTouch,
-			_ => panic!(format!("KeyCode::Undefined({})", num)),
+			_ => panic!(format!("KeyCode::Undefined({:x})", num)),
 		}
 	}
 }
@@ -83,7 +80,7 @@ enum AbsCode {
 	AbsMtPosX,
 	AbsMtPosY,
 	AbsMtTrackingId,
-    //UNDEFINED(u16),
+    //Undefined(u16),
 }
 
 impl From<u16> for AbsCode {
@@ -95,7 +92,7 @@ impl From<u16> for AbsCode {
 			53 => AbsCode::AbsMtPosX,
 			54 => AbsCode::AbsMtPosY,
 			57 => AbsCode::AbsMtTrackingId,
-            _ => panic!(format!("AbsCode::UNDEFINED({})", num))
+            _ => panic!(format!("AbsCode::Undefined({:x})", num))
         }
     }
 }
@@ -106,7 +103,7 @@ enum EvdevCode {
     SynCode(SynCode),
 	KeyCode(KeyCode),
     AbsCode(AbsCode),
-    //UNDEFINED(u16),
+    //Undefined(u16),
 }
 
 impl From<(u16, u16)> for EvdevCode {
@@ -115,7 +112,7 @@ impl From<(u16, u16)> for EvdevCode {
             EvdevType::EvSym => EvdevCode::SynCode(SynCode::from(type_and_num.1)),
             EvdevType::EvKey => EvdevCode::KeyCode(KeyCode::from(type_and_num.1)),
             EvdevType::EvAbs => EvdevCode::AbsCode(AbsCode::from(type_and_num.1)),
-            _ => panic!(format!("EvdevCode::UNDEFINED({})", type_and_num.0)),
+            _ => panic!(format!("EvdevCode::Undefined({:x})", type_and_num.0)),
         }
     }
 }
@@ -190,19 +187,40 @@ impl EventDevice {
     }
 }
 
-pub fn open_device(dev_nr: usize) -> Result<EventDevice, String> {
-    let file = File::open(format!("/dev/input/event{}", dev_nr)).unwrap();
+pub fn list_devices() -> Result<HashMap<usize, (String, EventDevice)>, std::io::Error> {    
+    let mut devices = HashMap::new();
+    for entry in fs::read_dir("/dev/input")? {
+        let entry = entry?;
+        let path = entry.path();
+        
+        if path.is_dir() {
+            continue;
+        }
+
+        let path = path.file_name().unwrap().to_str().unwrap();
+        if !path.starts_with("event") {
+            continue;
+        }
+        if path.len() > "event".len() {
+            let num_str: &str = path.split_at("event".len()).1;
+            let num = num_str.to_string().parse::<usize>().unwrap();
+            let dev = get_device_from_idx(num).unwrap();
+            let name = get_name_from_device(&dev).to_string();
+            devices.insert(num, (name, dev));
+        }
+    }
+    Ok(devices)
+} 
+
+fn get_device_from_idx(idx: usize) -> Result<EventDevice, String> {
+    let file = File::open(format!("/dev/input/event{}", idx)).unwrap();
     let fd = file.into_raw_fd();
 
     let mut evdev: *mut libevdev = ptr::null_mut();
     let ret = unsafe { libevdev_new_from_fd(fd, &mut evdev) };
     if ret != 0 {
-        panic!("libevdev_new_from_fd failed: {}", ret);
+        return Err(format!("libevdev_new_from_fd failed: {}", ret));
     }
-
-    let name = unsafe { libevdev_get_name(evdev) };
-    println!("device name: {}",
-             unsafe { CStr::from_ptr(name) }.to_str().unwrap());
 
     Ok(EventDevice {
         stream: evdev,
@@ -210,6 +228,18 @@ pub fn open_device(dev_nr: usize) -> Result<EventDevice, String> {
                libevdev_read_flag::LIBEVDEV_READ_FLAG_BLOCKING as u32,
         ev: input_event::default(),
     })
+}
+
+fn get_name_from_device(dev: &EventDevice) -> &'static str {
+    let name = unsafe { libevdev_get_name(dev.stream) };
+    unsafe { CStr::from_ptr(name) }.to_str().unwrap()
+}
+
+pub fn open_device(dev_nr: usize) -> Result<EventDevice, String> {
+    let device = get_device_from_idx(dev_nr)?;
+    println!("device name: {}", get_name_from_device(&device));
+
+    Ok(device)
 }
 
 #[cfg(test)]

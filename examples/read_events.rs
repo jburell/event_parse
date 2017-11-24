@@ -1,8 +1,9 @@
 extern crate event_parse;
 
 fn main() {
-	let mut device = event_parse::open_device(1).unwrap();
-	loop {
-		println!("{:?}", device.read());
+	let devices = event_parse::list_devices().unwrap();
+	for device in devices {
+		let mut dev = (device.1).0; // Ewwww....
+		println!("{}: {:?}", device.0, dev);//dev.read();
 	}
 }
