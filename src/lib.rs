@@ -1,5 +1,9 @@
 extern crate libevdev_sys;
 extern crate libc;
+#[macro_use] extern crate custom_derive;
+#[macro_use] extern crate newtype_derive;
+#[macro_use] extern crate enum_primitive;
+
 use self::libevdev_sys::evdev::*;
 use self::libevdev_sys::linux_input::*;
 use std::{ptr, fmt};
@@ -161,11 +165,6 @@ impl EventDevice {
 
         match ret {
             r if r == (libevdev_read_status::LIBEVDEV_READ_STATUS_SUCCESS as i32) => {
-                /*println!("[{}.{}] Code {:?}, Value {}",
-                         ev.time.tv_sec,
-                         ev.time.tv_usec,
-                         EvdevCode::from((ev.type_, ev.code)),
-                         ev.value);*/
                 Ok(EvdevEvent {
                     time: TimeVal {
 									sec: ev.time.tv_sec,
@@ -187,7 +186,24 @@ impl EventDevice {
     }
 }
 
-pub fn list_devices() -> Result<HashMap<usize, (String, EventDevice)>, std::io::Error> {    
+custom_derive! {
+    #[derive(Debug, NewtypeDisplay, NewtypeFrom)]
+    pub struct Error(String);
+}
+
+impl std::convert::From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Error {
+        Error(err.to_string())
+    }
+}
+
+impl std::convert::From<std::num::ParseIntError> for Error {
+    fn from(err: std::num::ParseIntError) -> Error {
+        Error(err.to_string())
+    }
+}
+
+pub fn list_devices() -> Result<HashMap<usize, (String, EventDevice)>, Error> {    
     let mut devices = HashMap::new();
     for entry in fs::read_dir("/dev/input")? {
         let entry = entry?;
@@ -203,8 +219,8 @@ pub fn list_devices() -> Result<HashMap<usize, (String, EventDevice)>, std::io::
         }
         if path.len() > "event".len() {
             let num_str: &str = path.split_at("event".len()).1;
-            let num = num_str.to_string().parse::<usize>().unwrap();
-            let dev = get_device_from_idx(num).unwrap();
+            let num = num_str.to_string().parse::<usize>()?;
+            let dev = get_device_from_idx(num)?;
             let name = get_name_from_device(&dev).to_string();
             devices.insert(num, (name, dev));
         }
@@ -212,14 +228,14 @@ pub fn list_devices() -> Result<HashMap<usize, (String, EventDevice)>, std::io::
     Ok(devices)
 } 
 
-fn get_device_from_idx(idx: usize) -> Result<EventDevice, String> {
-    let file = File::open(format!("/dev/input/event{}", idx)).unwrap();
+fn get_device_from_idx(idx: usize) -> Result<EventDevice, Error> {
+    let file = File::open(format!("/dev/input/event{}", idx))?;
     let fd = file.into_raw_fd();
 
     let mut evdev: *mut libevdev = ptr::null_mut();
     let ret = unsafe { libevdev_new_from_fd(fd, &mut evdev) };
     if ret != 0 {
-        return Err(format!("libevdev_new_from_fd failed: {}", ret));
+        return Err(Error(format!("libevdev_new_from_fd failed: {}", ret)));
     }
 
     Ok(EventDevice {
@@ -235,7 +251,7 @@ fn get_name_from_device(dev: &EventDevice) -> &'static str {
     unsafe { CStr::from_ptr(name) }.to_str().unwrap()
 }
 
-pub fn open_device(dev_nr: usize) -> Result<EventDevice, String> {
+pub fn open_device(dev_nr: usize) -> Result<EventDevice, Error> {
     let device = get_device_from_idx(dev_nr)?;
     println!("device name: {}", get_name_from_device(&device));
 

@@ -6,3 +6,6 @@ authors = ["Johan Burell <johan.burell@valtech.se>"]
 [dependencies]
 libevdev-sys = "0.1.1"
 libc = "*"
+custom_derive = "*"
+newtype_derive = "*"
+enum_primitive = "*"
