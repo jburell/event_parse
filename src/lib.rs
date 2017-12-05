@@ -3,6 +3,8 @@ extern crate libc;
 #[macro_use] extern crate custom_derive;
 #[macro_use] extern crate newtype_derive;
 #[macro_use] extern crate enum_primitive;
+extern crate num;
+use num::FromPrimitive;
 
 use self::libevdev_sys::evdev::*;
 use self::libevdev_sys::linux_input::*;
@@ -25,16 +27,18 @@ struct TimeVal {
 	usec: Int,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-enum EvdevType {
-    EvSym,
-    EvKey,
-    EvRel,
-    EvAbs,
-   // Undefined(u16),
+enum_from_primitive! {
+    #[derive(Debug, Clone, Eq, PartialEq)]
+    enum EvdevType {
+        EvSym = 0,
+        EvKey = 1,
+        EvRel = 2,
+        EvAbs = 3,
+    // Undefined(u16),
+    }
 }
 
-impl From<u16> for EvdevType {
+/*impl From<u16> for EvdevType {
     fn from(num: u16) -> Self {
         match num {
             0 => EvdevType::EvSym,
@@ -44,14 +48,16 @@ impl From<u16> for EvdevType {
             _ => panic!(format!("EvdevType::Undefined({:x})", num)),
         }
     }
-}
+}*/
 
-#[derive(Debug, Clone, PartialEq)]
-enum SynCode {
-    SynReport,
-   // Undefined(u16),
+enum_from_primitive! {
+    #[derive(Debug, Clone, PartialEq)]
+    enum SynCode {
+        SynReport = 0,
+    // Undefined(u16),
+    }
 }
-
+/*
 impl From<u16> for SynCode {
     fn from(num: u16) -> Self {
         match num {
@@ -59,34 +65,39 @@ impl From<u16> for SynCode {
             _ => panic!(format!("SynCode::Undefined({:x})", num)),
         }
     }
+}*/
+
+enum_from_primitive! {
+    #[derive(Debug, Clone, PartialEq)]
+    enum KeyCode {
+        BtnTouch = 330,
+        //Undefined(u16),
+    }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-enum KeyCode {
-	BtnTouch,
-	//Undefined(u16),
-}
-
-impl From<u16> for KeyCode {
+/*impl From<u16> for KeyCode {
 	fn from(num: u16) -> Self {
 		match num {
 			330 => KeyCode::BtnTouch,
 			_ => panic!(format!("KeyCode::Undefined({:x})", num)),
 		}
 	}
+}*/
+
+enum_from_primitive! {
+    #[derive(Debug, Clone, PartialEq)]
+    enum AbsCode {
+        AbsX             = 0,
+        AbsY             = 1,
+        AbsMtSlot        = 47,
+        AbsMtPosX        = 53,
+        AbsMtPosY        = 54,
+        AbsMtTrackingId  = 57,
+        //Undefined(u16),
+    }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-enum AbsCode {
-    AbsX,
-    AbsY,
-	AbsMtSlot,
-	AbsMtPosX,
-	AbsMtPosY,
-	AbsMtTrackingId,
-    //Undefined(u16),
-}
-
+/*
 impl From<u16> for AbsCode {
     fn from(num: u16) -> Self {
         match num {
@@ -99,7 +110,7 @@ impl From<u16> for AbsCode {
             _ => panic!(format!("AbsCode::Undefined({:x})", num))
         }
     }
-}
+}*/
 
 
 #[derive(Debug, Clone, PartialEq)]
@@ -112,10 +123,11 @@ enum EvdevCode {
 
 impl From<(u16, u16)> for EvdevCode {
     fn from(type_and_num: (u16, u16)) -> Self {
-        match EvdevType::from(type_and_num.0) {
-            EvdevType::EvSym => EvdevCode::SynCode(SynCode::from(type_and_num.1)),
-            EvdevType::EvKey => EvdevCode::KeyCode(KeyCode::from(type_and_num.1)),
-            EvdevType::EvAbs => EvdevCode::AbsCode(AbsCode::from(type_and_num.1)),
+        match EvdevType::from_u16(type_and_num.0 as _) {
+            // TODO: Remove unwraps
+            Some(EvdevType::EvSym) => EvdevCode::SynCode(SynCode::from_u16(type_and_num.1).unwrap()),
+            Some(EvdevType::EvKey) => EvdevCode::KeyCode(KeyCode::from_u16(type_and_num.1).unwrap()),
+            Some(EvdevType::EvAbs) => EvdevCode::AbsCode(AbsCode::from_u16(type_and_num.1).unwrap()),
             _ => panic!(format!("EvdevCode::Undefined({:x})", type_and_num.0)),
         }
     }
@@ -213,6 +225,7 @@ pub fn list_devices() -> Result<HashMap<usize, (String, EventDevice)>, Error> {
             continue;
         }
 
+        // TODO: Remove unrwap
         let path = path.file_name().unwrap().to_str().unwrap();
         if !path.starts_with("event") {
             continue;
