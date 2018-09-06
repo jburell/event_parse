@@ -1,5 +1,3 @@
-#![feature(io)]
-#![feature(exclusive_range_pattern)]
 extern crate event_parse;
 extern crate itertools;
 use itertools::Itertools;
@@ -21,10 +19,15 @@ fn main() {
 			print!("\nPick a device: ");
 			std::io::stdout().flush().unwrap();
 
-			let c = std::io::stdin()
-				.chars()
-				.next()
-				.and_then(|result| result.ok()).unwrap();
+            let mut input_string = String::new();
+			std::io::stdin()
+                .read_to_string(&mut input_string)
+                .unwrap();
+            let c = input_string
+                .trim()
+                .chars()
+                .next()
+                .unwrap();
 			
 			if let Some(number) = c.to_digit(10) {
 				match number {
