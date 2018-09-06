@@ -34,7 +34,7 @@ enum_from_primitive! {
         EvKey = 1,
         EvRel = 2,
         EvAbs = 3,
-    // Undefined(u16),
+     //Undefined(u16),
     }
 }
 
@@ -54,7 +54,7 @@ enum_from_primitive! {
     #[derive(Debug, Clone, PartialEq)]
     enum SynCode {
         SynReport = 0,
-    // Undefined(u16),
+     //Undefined(u16),
     }
 }
 /*
@@ -118,7 +118,7 @@ enum EvdevCode {
     SynCode(SynCode),
 	KeyCode(KeyCode),
     AbsCode(AbsCode),
-    //Undefined(u16),
+    Undefined(u16),
 }
 
 impl From<(u16, u16)> for EvdevCode {
@@ -126,9 +126,23 @@ impl From<(u16, u16)> for EvdevCode {
         match EvdevType::from_u16(type_and_num.0 as _) {
             // TODO: Remove unwraps
             Some(EvdevType::EvSym) => EvdevCode::SynCode(SynCode::from_u16(type_and_num.1).unwrap()),
-            Some(EvdevType::EvKey) => EvdevCode::KeyCode(KeyCode::from_u16(type_and_num.1).unwrap()),
-            Some(EvdevType::EvAbs) => EvdevCode::AbsCode(AbsCode::from_u16(type_and_num.1).unwrap()),
-            _ => panic!(format!("EvdevCode::Undefined({:x})", type_and_num.0)),
+            Some(EvdevType::EvKey) => if let Some(kc) = KeyCode::from_u16(type_and_num.1) {
+						EvdevCode::KeyCode(kc)
+					} else {
+						println!("Unknown key code: {:?}", type_and_num);
+						EvdevCode::Undefined(type_and_num.0)
+					}
+            Some(EvdevType::EvAbs) => if let Some(ac) = AbsCode::from_u16(type_and_num.1) {
+						EvdevCode::AbsCode(ac)
+					} else {
+						println!("Unknown abs code: {:?}", type_and_num);
+						EvdevCode::Undefined(type_and_num.0)
+					}
+            //_ => panic!(format!("EvdevCode::Undefined({:x})", type_and_num.0)),
+            _ => {
+			println!("EvdevCode::Undefined({:x})", type_and_num.0);
+			EvdevCode::Undefined(type_and_num.0)
+		}
         }
     }
 }
