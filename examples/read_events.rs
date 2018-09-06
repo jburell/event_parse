@@ -21,7 +21,7 @@ fn main() {
 
             let mut input_string = String::new();
 			std::io::stdin()
-                .read_to_string(&mut input_string)
+                .read_line(&mut input_string)
                 .unwrap();
             let c = input_string
                 .trim()
@@ -33,6 +33,15 @@ fn main() {
 				match number {
 					number if number > 0 && number < num_devices => {
 						println!("You picked: {}", number);
+                        let mut dev = event_parse::open_device(number as usize).unwrap();
+                        loop {
+                            match dev.read() {
+                                Ok(s) => {
+                                    println!("{:?}", s);
+                                }
+                                _ => {}
+                            }
+                        }
 					},
 					_ => {
 						println!("Please choose a valid device number between 0 and {}!", num_devices);
