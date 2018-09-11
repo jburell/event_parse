@@ -34,55 +34,22 @@ enum_from_primitive! {
         EvKey = 1,
         EvRel = 2,
         EvAbs = 3,
-     //Undefined(u16),
     }
 }
-
-/*impl From<u16> for EvdevType {
-    fn from(num: u16) -> Self {
-        match num {
-            0 => EvdevType::EvSym,
-            1 => EvdevType::EvKey,
-            2 => EvdevType::EvRel,
-            3 => EvdevType::EvAbs,
-            _ => panic!(format!("EvdevType::Undefined({:x})", num)),
-        }
-    }
-}*/
 
 enum_from_primitive! {
     #[derive(Debug, Clone, PartialEq)]
     enum SynCode {
         SynReport = 0,
-     //Undefined(u16),
     }
 }
-/*
-impl From<u16> for SynCode {
-    fn from(num: u16) -> Self {
-        match num {
-            0 => SynCode::SynReport,
-            _ => panic!(format!("SynCode::Undefined({:x})", num)),
-        }
-    }
-}*/
 
 enum_from_primitive! {
     #[derive(Debug, Clone, PartialEq)]
     enum KeyCode {
         BtnTouch = 330,
-        //Undefined(u16),
     }
 }
-
-/*impl From<u16> for KeyCode {
-	fn from(num: u16) -> Self {
-		match num {
-			330 => KeyCode::BtnTouch,
-			_ => panic!(format!("KeyCode::Undefined({:x})", num)),
-		}
-	}
-}*/
 
 enum_from_primitive! {
     #[derive(Debug, Clone, PartialEq)]
@@ -93,25 +60,8 @@ enum_from_primitive! {
         AbsMtPosX        = 53,
         AbsMtPosY        = 54,
         AbsMtTrackingId  = 57,
-        //Undefined(u16),
     }
 }
-
-/*
-impl From<u16> for AbsCode {
-    fn from(num: u16) -> Self {
-        match num {
-            0 => AbsCode::AbsX,
-            1 => AbsCode::AbsY,
-			47 => AbsCode::AbsMtSlot,
-			53 => AbsCode::AbsMtPosX,
-			54 => AbsCode::AbsMtPosY,
-			57 => AbsCode::AbsMtTrackingId,
-            _ => panic!(format!("AbsCode::Undefined({:x})", num))
-        }
-    }
-}*/
-
 
 #[derive(Debug, Clone, PartialEq)]
 enum EvdevCode {

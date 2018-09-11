@@ -2,7 +2,7 @@ extern crate event_parse;
 extern crate itertools;
 use itertools::Itertools;
 use std::process;
-use std::io::{Read, Write};
+use std::io::{Write};
 
 fn main() {
 	match event_parse::list_devices() {
