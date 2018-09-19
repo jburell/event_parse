@@ -14,6 +14,8 @@ use std::os::unix::io::IntoRawFd;
 use std::fs::{File, self};
 use std::collections::HashMap;
 
+mod codes;
+
 #[cfg(target_pointer_width = "32")]
 type Int = i32;
 
@@ -204,6 +206,17 @@ pub fn list_devices() -> Result<HashMap<usize, (String, EventDevice)>, Error> {
     }
     Ok(devices)
 } 
+
+/*fn print_props(dev: &Device) {
+	println!("Properties:");
+
+	for input_prop in InputProp::INPUT_PROP_POINTER.iter() {
+		if dev.has(&input_prop) {
+			println!("  Property type: {}", input_prop);
+        }
+    }
+}*/
+
 
 fn get_device_from_idx(idx: usize) -> Result<EventDevice, Error> {
     let file = File::open(format!("/dev/input/event{}", idx))?;
