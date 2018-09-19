@@ -15,6 +15,7 @@ use std::fs::{File, self};
 use std::collections::HashMap;
 
 mod codes;
+use codes::*;
 
 #[cfg(target_pointer_width = "32")]
 type Int = i32;
@@ -29,62 +30,18 @@ struct TimeVal {
 	usec: Int,
 }
 
-enum_from_primitive! {
-    #[derive(Debug, Clone, Eq, PartialEq)]
-    enum EvdevType {
-        EvSym = 0,
-        EvKey = 1,
-        EvRel = 2,
-        EvAbs = 3,
-    }
-}
-
-enum_from_primitive! {
-    #[derive(Debug, Clone, PartialEq)]
-    enum SynCode {
-        SynReport = 0,
-    }
-}
-
-enum_from_primitive! {
-    #[derive(Debug, Clone, PartialEq)]
-    enum KeyCode {
-        BtnTouch = 330,
-    }
-}
-
-enum_from_primitive! {
-    #[derive(Debug, Clone, PartialEq)]
-    enum AbsCode {
-        AbsX             = 0,
-        AbsY             = 1,
-        AbsMtSlot        = 47,
-        AbsMtPosX        = 53,
-        AbsMtPosY        = 54,
-        AbsMtTrackingId  = 57,
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-enum EvdevCode {
-    SynCode(SynCode),
-	KeyCode(KeyCode),
-    AbsCode(AbsCode),
-    Undefined(u16),
-}
-
 impl From<(u16, u16)> for EvdevCode {
     fn from(type_and_num: (u16, u16)) -> Self {
-        match EvdevType::from_u16(type_and_num.0 as _) {
+        match TypeCode::from_u16(type_and_num.0 as _) {
             // TODO: Remove unwraps
-            Some(EvdevType::EvSym) => EvdevCode::SynCode(SynCode::from_u16(type_and_num.1).unwrap()),
-            Some(EvdevType::EvKey) => if let Some(kc) = KeyCode::from_u16(type_and_num.1) {
+            Some(TypeCode::EV_SYN) => EvdevCode::SynCode(SynCode::from_u16(type_and_num.1).unwrap()),
+            Some(TypeCode::EV_KEY) => if let Some(kc) = KeyCode::from_u16(type_and_num.1) {
 						EvdevCode::KeyCode(kc)
 					} else {
 						println!("Unknown key code: {:?}", type_and_num);
 						EvdevCode::Undefined(type_and_num.0)
 					}
-            Some(EvdevType::EvAbs) => if let Some(ac) = AbsCode::from_u16(type_and_num.1) {
+            Some(TypeCode::EV_ABS) => if let Some(ac) = AbsCode::from_u16(type_and_num.1) {
 						EvdevCode::AbsCode(ac)
 					} else {
 						println!("Unknown abs code: {:?}", type_and_num);
@@ -254,7 +211,7 @@ mod test {
 
     #[test]
     fn parse_event_test() {
-        let expected = AbsCode::AbsY;
+        let expected = AbsCode::ABS_Y;
         if let EvdevCode::AbsCode(actual) = EvdevCode::from((3u16,1u16)) {
             assert_eq!(expected, actual);
         } else {

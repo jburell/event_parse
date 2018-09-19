@@ -1,5 +1,19 @@
 //#[macro_use] extern crate enum_primitive;
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum EvdevCode {
+    SynCode(SynCode),
+	KeyCode(KeyCode),
+    RelCode(RelCode),
+    AbsCode(AbsCode),
+    MscCode(MscCode),
+    SwiCode(SwiCode),
+    LedCode(LedCode),
+    SndCode(SndCode),
+    RepCode(RepCode),
+    Undefined(u16),
+}
+
 enum_from_primitive! {
     #[derive(Debug, Clone, PartialEq)]
     pub enum TypeCode {
@@ -12,9 +26,13 @@ enum_from_primitive! {
         EV_LED			= 0x11,
         EV_SND			= 0x12,
         EV_REP			= 0x14,
+        // ----------------------
+        // Used?
+        // ----------------------
         EV_FF			= 0x15,
         EV_PWR			= 0x16,
         EV_FF_STATUS	= 0x17,
+        // ----------------------
         //EV_MAX			= 0x1f,
         //EV_CNT			= (EV_MAX+1),
     }
